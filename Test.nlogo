@@ -1,54 +1,84 @@
-
 breed [ buyers buyer]  ; sheep is its own plural, so we use "a-sheep" as the singular
 breed [ sellers seller ]
 
-buyers-own [ reputation ]
-sellers-own [ reputation queuelength]
+buyers-own [ reputation reviewType ]
+sellers-own [ reputation busy busycounter customerid review]
+
+globals [dict sellercolorarray buyercolorarray]
+
+extensions [array]
 
 to setup
   clear-all
+
+  let alist [
+    92 93 94 95 96 97
+    102 103 104 105 106 107
+    112 113 114 115 116 117
+  ]
+  set buyercolorarray array:from-list alist
+
   create-buyers 100  ; create the sheep, then initialize their variables
   [
+    ;set UID random 10000
+    ;let uid table:get-or-default dict key UID
+
     set shape "person"
     set color white
     set size 1.5  ; easier to see
     set label-color blue - 2
-    set reputation random (50)
+    set reputation random (18)
+    set color array:item buyercolorarray reputation
     setxy random-xcor random-ycor
+    set reviewType random 100
   ]
+
+  set alist [
+    12 13 14 15 16 17
+    22 23 24 25 26 27
+    32 33 34 35 36 37
+    42 43 44 45 46 47
+    52 53 54 55 56 57
+    62 63 64 65 66 67]
+  set sellercolorarray array:from-list alist
 
   create-sellers 100  ; create the wolves, then initialize their variables
   [
     set shape "truck"
     let sellertype random 50
     ; set initial reputation based on expert opinion
-    (ifelse sellertype > 25 [set reputation 35] ;newbie
-      [set reputation 75]);experienced
-    set color reputation
+    (ifelse sellertype > 25 [set reputation 12] ;newbie
+      [set reputation 24]);experienced
+    set color array:item sellercolorarray reputation
     set size 2  ; easier to see
     setxy random-xcor random-ycor
-    set queuelength 0
+    set busy false
+    set busycounter 0
+    set customerid 0
+    set review 0
   ]
+
   reset-ticks
 end
+
 
 to go
     ask buyers [
       write "buyer"
-    purchase-good false
+    place-order
     ]
 
-    write "-"
-
-    ask buyers [
-      write "third party"
-    purchase-good true
+    ask sellers [
+    work-good
     ]
+
+
+
   tick
 end
 
 ; buyer purchase
-to purchase-good [thirdParty] ;buyer procedure
+to place-order ;buyer procedure
   let merchant one-of sellers
 
   ;while merchant queuelength > 2 [
@@ -59,50 +89,79 @@ to purchase-good [thirdParty] ;buyer procedure
 
   if merchant != nobody [
     show [who] of merchant
-    if true [ ;queuelength of merchant < 2
-      let reviewType random 100
-
-      ; using BRS, binary review of 1, -1
-      (ifelse
-        reviewType > NumDishonest [
-        ask merchant [
-            increaseRep thirdParty
-         ]
+    ;let id [who] of merchant
+    ; check the reputation of the merchant to see if the
+    ; buyer wants to buy from that mechant
+    let rep [reputation] of merchant
+    if rep > 4 [ ; bad rep, don't purchase
+      let b [busy] of merchant
+      ;set seller id customerid who
+      if b = false [
+        ask merchant[
+          start-work
         ]
-        [
-        ask merchant [
-            decreaseRep thirdParty
-         ]
-        ]
-      )
-
+      ]
     ]
    ]
 end
 
-to increaseque
-  set queuelength queuelength + 1
+
+to start-work
+  set busy true
+  (ifelse reputation < 25 [
+    set busycounter 1 ;bad rep, push more goods
+    ][
+    set busycounter 3
+  ])
+  set shape "wheel"
+end
+
+to work-good
+  (ifelse
+       busycounter < 1 and busy = true[
+      ; using BRS, binary review of 1, -1
+      set review random 100
+      ;ask buyer customerid [ let revType reviewType]
+      (ifelse
+        review > NumDishonest [
+        ask self [
+            increaseRep
+         ]
+        ]
+        [
+        ask self [
+            decreaseRep
+         ]
+        ]
+      )
+    set busy false
+    set shape "truck"
+  ][
+  set busycounter busycounter - 1
+  ])
 end
 
 
-to increaseRep [thirdParty] ; seller-procedure
-  if reputation < 136 [
-    ifelse thirdParty [set reputation reputation + 1
-      write "tp inc"]
-    [set reputation reputation + 2
-      write "inc"]
-  ]
-  set color reputation
+
+to-report getRep
+  report reputation
 end
 
-to decreaseRep [thirdParty] ; seller-procedure
-  if reputation > 4 [
-    ifelse thirdParty [set reputation reputation - 1
-    write "tp dec"]
-    [set reputation reputation - 2
-    write "dec"]
+
+to increaseRep ; seller-procedure
+  if reputation < 62 [
+    set reputation reputation + 2
+      write "inc"
   ]
-  set color reputation
+  set color array:item sellercolorarray reputation
+end
+
+to decreaseRep  ; seller-procedure
+  if reputation > 1 [
+    set reputation reputation - 2
+    write "dec"
+  ]
+  set color array:item sellercolorarray reputation
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -175,7 +234,7 @@ NumDishonest
 NumDishonest
 0
 100
-99.0
+50.0
 1
 1
 NIL
