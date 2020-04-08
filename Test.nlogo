@@ -1,10 +1,10 @@
 breed [ buyers buyer]  ; sheep is its own plural, so we use "a-sheep" as the singular
 breed [ sellers seller ]
 
-buyers-own [ reputation reviewType ]
+buyers-own [ reputation reviewType dishonest]
 sellers-own [ reputation busy busycounter customerid review]
 
-globals [dict sellercolorarray buyercolorarray]
+globals [dict sellercolorarray buyercolorarray dishonestcount]
 
 extensions [array]
 
@@ -27,10 +27,15 @@ to setup
     set color white
     set size 1.5  ; easier to see
     set label-color blue - 2
-    set reputation random (18)
+    set reputation random 18
+    if reputation <= 4 [ set reputation 5]
     set color array:item buyercolorarray reputation
     setxy random-xcor random-ycor
     set reviewType random 100
+    (ifelse dishonestcount < numDishonest
+      [set dishonest true
+      set dishonestcount dishonestcount + 1]
+      [set dishonest false])
   ]
 
   set alist [
@@ -100,6 +105,14 @@ to place-order ;buyer procedure
         ask merchant[
           start-work
         ]
+        ;let merwho [who] of merchant
+        let buywho [who] of self
+        ;set merchant customerid of buywho
+        ask seller [who] of merchant [set customerid buywho]
+        ;show "customerid"
+        ;show [customerid] of merchant
+        ;ask link merwho buywho [set color green]
+
       ]
     ]
    ]
@@ -121,21 +134,36 @@ to work-good
        busycounter < 1 and busy = true[
       ; using BRS, binary review of 1, -1
       set review random 100
-      ;ask buyer customerid [ let revType reviewType]
-      (ifelse
-        review > NumDishonest [
-        ask self [
-            increaseRep
-         ]
-        ]
-        [
-        ask self [
-            decreaseRep
-         ]
-        ]
-      )
+      ;ask buyer customerid [ let dishon dishonest]
+      let consumer buyer customerid
+      let dishon [dishonest] of consumer
+      let consrep [reputation] of consumer
+      if consrep > 4 [
+        (ifelse
+          dishon = true and
+          review < dishonestProbability
+          [
+            ; give a bad review to the seller
+            ask self [
+              decreaseRep sellercolorarray
+            ]
+            ; give a bad review to the buyer
+            ask consumer [
+              decreaseRep buyercolorarray
+            ]
+          ]
+          [
+            ask self [
+              increaseRep sellercolorarray 33
+            ]
+            ask consumer [
+              increaseRep buyercolorarray 15
+            ]
+          ]
+        )
+      ]
     set busy false
-    set shape "truck"
+      if reputation > 4 [ set shape "truck" ]
   ][
   set busycounter busycounter - 1
   ])
@@ -148,20 +176,22 @@ to-report getRep
 end
 
 
-to increaseRep ; seller-procedure
-  if reputation < 62 [
+to increaseRep [colorarray maxcolor] ; seller-procedure or buyer-procedure
+  if reputation < maxcolor [
     set reputation reputation + 2
       write "inc"
+    set color array:item colorarray reputation
   ]
-  set color array:item sellercolorarray reputation
 end
 
-to decreaseRep  ; seller-procedure
+to decreaseRep [colorarray] ; seller-procedure or buyer-procedure
   if reputation > 1 [
     set reputation reputation - 2
     write "dec"
+    set color array:item colorarray reputation
+    if reputation <= 4
+    [set shape "x"]
   ]
-  set color array:item sellercolorarray reputation
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -226,19 +256,72 @@ NIL
 1
 
 SLIDER
-38
+18
 172
-210
+190
 205
 NumDishonest
 NumDishonest
 0
 100
-50.0
+93.0
 1
 1
 NIL
 HORIZONTAL
+
+SLIDER
+20
+221
+192
+254
+DishonestProbability
+DishonestProbability
+0
+100
+94.0
+1
+1
+NIL
+HORIZONTAL
+
+PLOT
+14
+283
+214
+433
+plot 1
+reputation
+num agents
+0.0
+36.0
+0.0
+100.0
+true
+false
+"" ""
+PENS
+"default" 1.0 1 -1184463 true "" "histogram [reputation] of sellers"
+"pen-1" 1.0 1 -11221820 true "" "histogram [reputation] of buyers"
+
+PLOT
+657
+12
+857
+162
+plot 2
+shape
+num agents
+0.0
+10.0
+0.0
+100.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -11221820 true "" "plot count person of [reputation] > 4\n\n"
+"pen-1" 1.0 0 -1184463 true "" "histogram [shape] of sellers"
 
 @#$#@#$#@
 ## WHAT IS IT?
