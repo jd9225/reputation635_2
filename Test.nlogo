@@ -36,6 +36,7 @@ to setup
       [set dishonest true
       set dishonestcount dishonestcount + 1]
       [set dishonest false])
+    show reputation
   ]
 
   set alist [
@@ -61,6 +62,7 @@ to setup
     set busycounter 0
     set customerid 0
     set review 0
+    show reputation
   ]
 
   reset-ticks
@@ -303,25 +305,6 @@ false
 PENS
 "default" 1.0 1 -1184463 true "" "histogram [reputation] of sellers"
 "pen-1" 1.0 1 -11221820 true "" "histogram [reputation] of buyers"
-
-PLOT
-657
-12
-857
-162
-plot 2
-shape
-num agents
-0.0
-10.0
-0.0
-100.0
-true
-false
-"" ""
-PENS
-"default" 1.0 0 -11221820 true "" "plot count person of [reputation] > 4\n\n"
-"pen-1" 1.0 0 -1184463 true "" "histogram [shape] of sellers"
 
 @#$#@#$#@
 ## WHAT IS IT?
